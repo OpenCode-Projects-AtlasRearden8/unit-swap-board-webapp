@@ -1,0 +1,1139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unit Swap Board</title>
+<style>
+  :root {
+    --ink: #24312f;
+    --muted: #5f6f6c;
+    --panel: #ffffff;
+    --bg: #faf7f1;
+    --line: #e5ded2;
+    --accent: #0f766e;
+    --accent-soft: #d7f0ed;
+    --request-bg: #fff7ec;
+    --request-line: #f0c98a;
+    --offer-bg: #f2fdf3;
+    --offer-line: #9fd8a4;
+    --warn: #b4501e;
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 16px; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.45;
+  }
+  header.site {
+    background: var(--accent);
+    color: #ffffff;
+    padding: 0.9rem 1rem;
+  }
+  header.site h1 { margin: 0 0 0.15rem; font-size: 1.35rem; }
+  header.site p { margin: 0; font-size: 0.9rem; opacity: 0.92; }
+  .disclaimer {
+    background: #fff3cd;
+    border-bottom: 1px solid #e5cf8a;
+    padding: 0.55rem 1rem;
+    font-size: 0.85rem;
+    color: #5c4a12;
+  }
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1rem;
+    display: grid;
+    gap: 1rem;
+  }
+  section.panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1rem;
+  }
+  section.panel h2 {
+    margin: 0 0 0.6rem;
+    font-size: 1.05rem;
+    color: var(--accent);
+  }
+  .panel .hint { color: var(--muted); font-size: 0.83rem; margin: 0 0 0.6rem; }
+  button {
+    font: inherit;
+    border: 1px solid var(--line);
+    background: #ffffff;
+    color: var(--ink);
+    border-radius: 7px;
+    padding: 0.3rem 0.65rem;
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.primary:disabled { background: #a8c6c3; border-color: #a8c6c3; cursor: not-allowed; }
+  button.small { padding: 0.15rem 0.45rem; font-size: 0.8rem; }
+  button.toggled { background: var(--accent-soft); border-color: var(--accent); font-weight: 600; }
+  button.careful { color: var(--warn); }
+  input, select {
+    font: inherit;
+    padding: 0.25rem 0.4rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--ink);
+    max-width: 100%;
+  }
+  label { font-size: 0.85rem; color: var(--muted); }
+
+  /* Roster */
+  .roster-line { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.6rem; }
+  .person-chip {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    background: var(--accent-soft); border: 1px solid var(--accent);
+    border-radius: 999px; padding: 0.15rem 0.3rem 0.15rem 0.65rem;
+    font-size: 0.85rem; font-weight: 600;
+  }
+  .person-chip button { border-radius: 999px; padding: 0 0.4rem; }
+
+  /* Grid */
+  .grid-wrap { overflow-x: auto; }
+  table.grid { border-collapse: collapse; width: 100%; min-width: 640px; }
+  table.grid th, table.grid td {
+    border: 1px solid var(--line);
+    padding: 0.35rem 0.4rem;
+    text-align: left;
+    font-size: 0.85rem;
+    vertical-align: top;
+  }
+  table.grid thead th { background: var(--accent-soft); color: var(--accent); }
+  table.grid td.cell { min-width: 130px; }
+  .cell-controls { display: flex; flex-direction: column; gap: 0.3rem; }
+  .cell-controls .row { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+  .needs-chip {
+    display: inline-block; font-size: 0.72rem; font-weight: 700;
+    border-radius: 999px; padding: 0.05rem 0.5rem;
+    background: #ffe9e2; color: var(--warn); border: 1px solid #f2b097;
+  }
+  .open-tag { color: var(--muted); font-size: 0.75rem; font-style: italic; }
+
+  /* Cards */
+  .board-toolbar { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.7rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.7rem; }
+  .card {
+    border: 1px solid var(--line); border-radius: 9px; padding: 0.6rem;
+    box-shadow: 1px 2px 3px rgba(80, 68, 40, 0.08);
+  }
+  .card.request { background: var(--request-bg); border-color: var(--request-line); }
+  .card.offer { background: var(--offer-bg); border-color: var(--offer-line); }
+  .card.done { opacity: 0.55; }
+  .card-top { display: flex; justify-content: space-between; align-items: center; gap: 0.4rem; margin-bottom: 0.35rem; }
+  .card .tag { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .card.request .tag { color: #a45a10; }
+  .card.offer .tag { color: #1c6b2e; }
+  .card .slot { font-size: 0.8rem; font-weight: 600; color: var(--ink); }
+  .card form-row { display: block; }
+  .card .fields { display: grid; gap: 0.35rem; margin: 0.35rem 0; }
+  .card .fields input, .card .fields select { width: 100%; }
+  .card-actions { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.4rem; }
+
+  /* Matches + confirmed */
+  .match, .confirmation {
+    border: 1px solid var(--line); border-radius: 9px; background: #fff;
+    padding: 0.6rem 0.7rem; margin-bottom: 0.6rem;
+  }
+  .match .thumb-state { font-size: 0.82rem; margin: 0.3rem 0; }
+  .thumb-yes { color: #1c6b2e; font-weight: 700; }
+  .thumb-no { color: var(--muted); }
+  .match button.go { margin-right: 0.4rem; }
+  .confirmation .applied { color: #1c6b2e; font-weight: 700; font-size: 0.85rem; }
+  .confirmation .pending { color: var(--muted); font-size: 0.85rem; }
+
+  /* Fairness */
+  table.fair { border-collapse: collapse; min-width: 320px; }
+  table.fair th, table.fair td { border: 1px solid var(--line); padding: 0.3rem 0.6rem; font-size: 0.85rem; }
+  table.fair th { background: var(--accent-soft); color: var(--accent); }
+  td.net-pos { color: #1c6b2e; font-weight: 700; }
+  td.net-neg { color: var(--warn); font-weight: 700; }
+  td.net-zero { color: var(--muted); }
+
+  .data-toolbar { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+  .save-note { font-size: 0.82rem; color: var(--muted); }
+
+  footer.site {
+    max-width: 1100px; margin: 0.5rem auto 2rem; padding: 0 1rem;
+    font-size: 0.8rem; color: var(--muted);
+  }
+
+  /* Print */
+  #print-area { display: none; }
+  @media print {
+    body { background: #fff; }
+    body * { visibility: hidden; }
+    #print-area {
+      display: block;
+      position: absolute; top: 0; left: 0; width: 100%;
+      visibility: visible;
+    }
+    #print-area, #print-area * { visibility: visible; }
+    .note-box {
+      border: 1.5px solid #333; border-radius: 6px;
+      padding: 0.5rem 0.9rem; margin-bottom: 14px;
+      font-size: 12pt; page-break-inside: avoid;
+    }
+    .note-box h3 { margin: 0 0 6px; font-size: 13pt; }
+    .note-box p { margin: 4px 0; }
+    .note-box .lines span { display: inline-block; border-bottom: 1px solid #333; min-width: 150px; }
+    .print-head { font-size: 14pt; font-weight: 700; margin-bottom: 10px; }
+    .print-foot { font-size: 9pt; color: #444; margin-top: 6px; }
+  }
+</style>
+</head>
+<body>
+<header class="site">
+  <h1>Unit Swap Board</h1>
+  <p>Organize shift swaps within your own squad &mdash; a notebook that lives in this browser.</p>
+</header>
+<div class="disclaimer">
+  <strong>Education-only practice tool.</strong> This is not a scheduling-of-record system and it is not medical advice.
+  Nothing here changes an official schedule: every swap must follow your facility's own process and get official sign-off.
+  All data is stored only in this browser (localStorage). No accounts, no cloud.
+</div>
+
+<main>
+  <section class="panel" id="roster-panel">
+    <h2>Your squad</h2>
+    <p class="hint">Add the nurses you're trading with. Removing someone also removes their open cards and unassigns their slots.</p>
+    <div class="roster-line">
+      <label for="new-person">Name</label>
+      <input id="new-person" placeholder="e.g. Ravi" maxlength="40">
+      <button class="primary" data-action="add-person">Add person</button>
+      <button data-action="load-sample">Load example squad</button>
+    </div>
+    <div id="roster-list"></div>
+  </section>
+
+  <section class="panel" id="grid-panel">
+    <h2>Shift grid</h2>
+    <p class="hint">Write down who is pencilled into each slot and mark slots that need coverage. Edit the day labels to match your schedule.</p>
+    <div class="grid-wrap">
+      <table class="grid">
+        <thead id="grid-head"></thead>
+        <tbody id="grid-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel" id="board-panel">
+    <h2>Requests &amp; offers</h2>
+    <p class="hint">
+      A <strong>request</strong> asks for coverage of a slot. An <strong>offer</strong> says a nurse can cover that slot
+      (optionally naming a trade-back slot for a straight trade). Give your card a thumbs-up when you've actually talked to your squad.
+    </p>
+    <div class="board-toolbar">
+      <label for="board-slot">Slot</label>
+      <select id="board-slot"></select>
+      <label for="board-person">Nurse</label>
+      <select id="board-person"></select>
+      <button data-action="add-request">Add request</button>
+      <button data-action="add-offer">Add offer</button>
+    </div>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <section class="panel" id="matches-panel">
+    <h2>Possible matches</h2>
+    <p class="hint">A match pairs a request with an offer on the same slot for different nurses. When both cards have a thumbs-up, you can record the trade as covered &mdash; then everyone writes it down themselves and prints a confirmation note.</p>
+    <div id="matches"></div>
+  </section>
+
+  <section class="panel" id="confirmed-panel">
+    <h2>Covered trades (your own written record)</h2>
+    <div style="margin-bottom:0.7rem">
+      <button class="primary" data-action="print-notes">Print swap-confirm notes</button>
+    </div>
+    <div id="confirmed"></div>
+  </section>
+
+  <section class="panel" id="fairness-panel">
+    <h2>Fairness counter</h2>
+    <p class="hint">Counts covered trades from this board: <strong>given</strong> = you covered for someone, <strong>received</strong> = someone covered for you.</p>
+    <div id="fairness"></div>
+  </section>
+
+  <section class="panel" id="data-panel">
+    <h2>Data (stays on this device)</h2>
+    <div class="data-toolbar">
+      <button data-action="export-json" id="export-btn">Export JSON file</button>
+      <button data-action="import-json">Import JSON file</button>
+      <input type="file" id="import-file" accept="application/json,.json" style="display:none">
+      <button class="careful" data-action="reset-all">Erase everything</button>
+      <span class="save-note" id="save-note"></span>
+    </div>
+  </section>
+</main>
+
+<div id="print-area" aria-hidden="true"></div>
+
+<footer class="site">
+  Unit Swap Board &mdash; an education-only tool by Asdale Dynamics, LLC (MIT licensed).
+  Best-effort matching only: always confirm in person and follow your facility's official swap procedure.
+</footer>
+
+<script id="swaplogic">
+/* === SWAPLOGIC BEGIN === */
+var SwapLogic = (function () {
+  'use strict';
+
+  var DEFAULT_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  var DEFAULT_SHIFTS = ['Day', 'Evening', 'Night'];
+  var STORAGE_KEY = 'unitSwapBoard.v1';
+
+  var uidCounter = 0;
+  function uid(prefix) {
+    uidCounter += 1;
+    return (prefix || 'id') + '-' + Date.now().toString(36) + '-' + uidCounter + '-' +
+      Math.random().toString(36).slice(2, 8);
+  }
+
+  function slotKey(day, shift) {
+    return String(day) + '|' + String(shift);
+  }
+
+  function slotParts(key) {
+    var i = String(key).indexOf('|');
+    return [String(key).slice(0, i), String(key).slice(i + 1)];
+  }
+
+  function dedupe(arr) {
+    var seen = {};
+    var out = [];
+    arr.forEach(function (v) {
+      if (!seen[v]) { seen[v] = true; out.push(v); }
+    });
+    return out;
+  }
+
+  function emptySlots(days, shifts) {
+    var slots = {};
+    days.forEach(function (d) {
+      shifts.forEach(function (s) {
+        slots[slotKey(d, s)] = { person: '', needs: false };
+      });
+    });
+    return slots;
+  }
+
+  function emptyState() {
+    return normalizeState(null);
+  }
+
+  function _cleanSlot(v) {
+    return {
+      person: (v && typeof v.person === 'string') ? v.person : '',
+      needs: !!(v && v.needs)
+    };
+  }
+
+  function normalizeState(raw) {
+    var s = (raw && typeof raw === 'object') ? raw : {};
+    var days = Array.isArray(s.days)
+      ? s.days.filter(function (d) { return typeof d === 'string' && d.trim(); })
+        .slice(0, 7).map(function (d) { return d.trim(); })
+      : [];
+    if (!days.length) days = DEFAULT_DAYS.slice();
+
+    var shifts = DEFAULT_SHIFTS.slice();
+    var slots = emptySlots(days, shifts);
+    var rawSlots = (s.slots && typeof s.slots === 'object') ? s.slots : {};
+    Object.keys(slots).forEach(function (k) {
+      slots[k] = _cleanSlot(rawSlots[k]);
+    });
+
+    var people = Array.isArray(s.people)
+      ? dedupe(s.people.filter(function (p) { return typeof p === 'string'; })
+        .map(function (p) { return p.trim(); })
+        .filter(Boolean))
+      : [];
+
+    var cards = Array.isArray(s.cards) ? s.cards : [];
+    cards = cards
+      .filter(function (c) {
+        if (!c || typeof c !== 'object') return false;
+        if (c.kind !== 'request' && c.kind !== 'offer') return false;
+        return true;
+      })
+      .map(function (c) {
+        var kind = c.kind;
+        var slotId = (typeof c.slotId === 'string' && slots[c.slotId]) ? c.slotId : '';
+        var kindTrade = kind === 'offer' && typeof c.tradeSlotId === 'string' &&
+          slots[c.tradeSlotId] && c.tradeSlotId !== slotId ? c.tradeSlotId : '';
+        return {
+          id: (typeof c.id === 'string' && c.id) ? c.id : uid('card'),
+          kind: kind,
+          slotId: slotId,
+          person: (typeof c.person === 'string') ? c.person : '',
+          tradeSlotId: kindTrade,
+          detail: (typeof c.detail === 'string') ? c.detail.slice(0, 200) : '',
+          thumb: !!c.thumb,
+          status: c.status === 'done' ? 'done' : 'open'
+        };
+      })
+      .filter(function (c) { return !!c.slotId; });
+
+    var confirmed = Array.isArray(s.confirmed) ? s.confirmed : [];
+    confirmed = confirmed
+      .filter(function (c) { return c && typeof c === 'object' && slots[c.slotId]; })
+      .map(function (c) {
+        return {
+          id: (typeof c.id === 'string' && c.id) ? c.id : uid('conf'),
+          requestId: (typeof c.requestId === 'string') ? c.requestId : '',
+          offerId: (typeof c.offerId === 'string') ? c.offerId : '',
+          slotId: c.slotId,
+          requestPerson: (typeof c.requestPerson === 'string') ? c.requestPerson : '',
+          offerPerson: (typeof c.offerPerson === 'string') ? c.offerPerson : '',
+          tradeSlotId: (typeof c.tradeSlotId === 'string' && slots[c.tradeSlotId] &&
+            c.tradeSlotId !== c.slotId) ? c.tradeSlotId : '',
+          mode: c.mode === 'swap' ? 'swap' : 'pickup',
+          applied: !!c.applied,
+          createdAt: (typeof c.createdAt === 'string') ? c.createdAt : ''
+        };
+      });
+
+    var state = {
+      version: 1,
+      people: people,
+      days: days,
+      shifts: shifts,
+      slots: slots,
+      cards: cards,
+      confirmed: confirmed
+    };
+
+    state = _ensureRosterCoverage(state);
+    return state;
+  }
+
+  function _ensureRosterCoverage(state) {
+    var people = state.people.slice();
+    function addName(n) {
+      var t = (typeof n === 'string') ? n.trim() : '';
+      if (t && people.indexOf(t) === -1) people.push(t);
+    }
+    Object.keys(state.slots).forEach(function (k) { addName(state.slots[k].person); });
+    state.cards.forEach(function (c) {
+      addName(c.person);
+      if (c.tradeSlotId && c.tradeSlotId !== c.slotId) {
+        addName(state.slots[c.tradeSlotId] && state.slots[c.tradeSlotId].person);
+      }
+    });
+    state.confirmed.forEach(function (c) {
+      addName(c.requestPerson);
+      addName(c.offerPerson);
+    });
+    state.people = people;
+    return state;
+  }
+
+  function slotLabel(state, key) {
+    var parts = slotParts(key);
+    return parts.join(' \u00b7 ');
+  }
+
+  function newCard(kind, slotId, person, tradeSlotId) {
+    return {
+      id: uid('card'),
+      kind: kind,
+      slotId: slotId,
+      person: person || '',
+      tradeSlotId: (kind === 'offer' && tradeSlotId) ? tradeSlotId : '',
+      detail: '',
+      thumb: false,
+      status: 'open'
+    };
+  }
+
+  function newRequest(state, slotId, person) {
+    var card = newCard('request', slotId, person, '');
+    return { state: addCard(state, card), card: card };
+  }
+
+  function newOffer(state, slotId, person, tradeSlotId) {
+    var card = newCard('offer', slotId, person, tradeSlotId);
+    return { state: addCard(state, card), card: card };
+  }
+
+  function addCard(state, card) {
+    var cards = state.cards.concat([card]);
+    var next = Object.assign({}, state, { cards: cards });
+    return _ensureRosterCoverage(next);
+  }
+
+  function buildMatches(state) {
+    var requests = state.cards.filter(function (c) {
+      return c.kind === 'request' && c.status === 'open';
+    });
+    var offers = state.cards.filter(function (c) {
+      return c.kind === 'offer' && c.status === 'open';
+    });
+    var usedOffers = {};
+    var matches = [];
+    requests.forEach(function (r) {
+      for (var i = 0; i < offers.length; i++) {
+        var o = offers[i];
+        if (usedOffers[o.id]) continue;
+        if (o.slotId !== r.slotId) continue;
+        if (o.person === r.person) continue;
+        usedOffers[o.id] = true;
+        matches.push({
+          id: r.id + '::' + o.id,
+          requestId: r.id,
+          offerId: o.id,
+          slotId: r.slotId,
+          requestPerson: r.person,
+          offerPerson: o.person,
+          tradeSlotId: o.tradeSlotId || ''
+        });
+        break;
+      }
+    });
+    return matches;
+  }
+
+  function cardById(state, id) {
+    for (var i = 0; i < state.cards.length; i++) {
+      if (state.cards[i].id === id) return state.cards[i];
+    }
+    return null;
+  }
+
+  function matchById(state, matchId) {
+    var matches = buildMatches(state);
+    for (var i = 0; i < matches.length; i++) {
+      if (matches[i].id === matchId) return matches[i];
+    }
+    return null;
+  }
+
+  function isFullyThumbed(state, match) {
+    var r = cardById(state, match.requestId);
+    var o = cardById(state, match.offerId);
+    return !!(r && o && r.thumb && o.thumb);
+  }
+
+  function confirmMatch(state, match, mode) {
+    if (mode !== 'pickup' && mode !== 'swap') mode = 'pickup';
+    if (!match || !isFullyThumbed(state, match)) return { state: state, confirmation: null };
+    var now = new Date().toISOString();
+    var confirmation = {
+      id: uid('conf'),
+      requestId: match.requestId,
+      offerId: match.offerId,
+      slotId: match.slotId,
+      requestPerson: match.requestPerson,
+      offerPerson: match.offerPerson,
+      tradeSlotId: mode === 'swap' ? match.tradeSlotId : '',
+      mode: mode,
+      applied: false,
+      createdAt: now
+    };
+    var cards = state.cards.map(function (c) {
+      if (c.id === match.requestId || c.id === match.offerId) {
+        return Object.assign({}, c, { status: 'done' });
+      }
+      return c;
+    });
+    var next = Object.assign({}, state, {
+      cards: cards,
+      confirmed: state.confirmed.concat([confirmation])
+    });
+    return { state: next, confirmation: confirmation };
+  }
+
+  function applyConfirmationToSlots(state, confirmation) {
+    if (!confirmation || confirmation.applied || !state.slots[confirmation.slotId]) {
+      return { state: state, changed: false };
+    }
+    var slots = {};
+    Object.keys(state.slots).forEach(function (k) {
+      slots[k] = {
+        person: state.slots[k].person,
+        needs: state.slots[k].needs
+      };
+    });
+    slots[confirmation.slotId].person = confirmation.offerPerson;
+    slots[confirmation.slotId].needs = false;
+    var changed = true;
+    if (confirmation.mode === 'swap' && confirmation.tradeSlotId &&
+        slots[confirmation.tradeSlotId] && confirmation.tradeSlotId !== confirmation.slotId) {
+      slots[confirmation.tradeSlotId].person = confirmation.requestPerson;
+    }
+    var confirmed = state.confirmed.map(function (c) {
+      if (c.id === confirmation.id) return Object.assign({}, c, { applied: true });
+      return c;
+    });
+    var next = Object.assign({}, state, { slots: slots, confirmed: confirmed });
+    return { state: next, changed: changed };
+  }
+
+  function tallyFairness(state) {
+    var tally = {};
+    state.people.forEach(function (p) {
+      tally[p] = { given: 0, received: 0 };
+    });
+    function bump(name, field) {
+      if (!tally[name]) tally[name] = { given: 0, received: 0 };
+      tally[name][field] += 1;
+    }
+    state.confirmed.forEach(function (c) {
+      if (c.mode === 'pickup') {
+        bump(c.offerPerson, 'given');
+        bump(c.requestPerson, 'received');
+      } else {
+        bump(c.requestPerson, 'given');
+        bump(c.requestPerson, 'received');
+        bump(c.offerPerson, 'given');
+        bump(c.offerPerson, 'received');
+      }
+    });
+    var rows = [];
+    Object.keys(tally).forEach(function (p) {
+      var t = tally[p];
+      rows.push({ person: p, given: t.given, received: t.received, net: t.given - t.received });
+    });
+    return rows;
+  }
+
+  function noteLines(state, confirmation) {
+    var covered = slotLabel(state, confirmation.slotId);
+    var trade = confirmation.tradeSlotId
+      ? slotLabel(state, confirmation.tradeSlotId)
+      : 'None';
+    var when = confirmation.createdAt
+      ? new Date(confirmation.createdAt).toLocaleString()
+      : '';
+    var lines = [
+      'SWAP-CONFIRM NOTE (education-only personal worksheet)',
+      'Prepared from Unit Swap Board: ' + when,
+      'Facility: ______________________  Unit: ______________',
+      'Shift being covered: ' + covered,
+      'Outgoing nurse (leaving the shift): ' + confirmation.requestPerson,
+      'Incoming nurse (covering the shift): ' + confirmation.offerPerson,
+      'Trade-back shift: ' + trade,
+      'Agreement type: ' + (confirmation.mode === 'swap' ? 'Even swap' : 'Pickup / coverage'),
+      '',
+      '1) Outgoing nurse signature: ________________  Date: __________',
+      '2) Incoming nurse signature: ________________  Date: __________',
+      '3) Charge nurse / supervisor sign-off: ________  Date: __________',
+      '',
+      'Reminder: this note is not an official record. Follow your facility\u2019s',
+      'official swap procedure before the swap is final. Not medical advice.'
+    ];
+    return lines;
+  }
+
+  function sampleState() {
+    var s = emptyState();
+    s.people = ['Ada', 'Ravi', 'Mei'];
+    s.slots[slotKey('Tue', 'Day')] = { person: 'Ada', needs: true };
+    s.slots[slotKey('Thu', 'Night')] = { person: 'Ravi', needs: false };
+    s.slots[slotKey('Sat', 'Night')] = { person: 'Mei', needs: false };
+    s.slots[slotKey('Sat', 'Night')].needs = false;
+
+    var raviOffer = newCard('offer', slotKey('Tue', 'Day'), 'Ravi', slotKey('Thu', 'Night'));
+    raviOffer.detail = 'Can take Tue Day if you cover my Thu night.';
+    var meiOffer = newCard('offer', slotKey('Tue', 'Day'), 'Mei', '');
+    meiOffer.detail = 'Extra, happy to pick it up.';
+    meiOffer.thumb = true;
+    var adaRequest = newCard('request', slotKey('Tue', 'Day'), 'Ada', '');
+    adaRequest.detail = 'Dentist appointment.';
+    var satRequest = newCard('request', slotKey('Sat', 'Night'), 'Mei', '');
+    satRequest.detail = 'Family visit.';
+    satRequest.status = 'done';
+    var satOffer = newCard('offer', slotKey('Sat', 'Night'), 'Ravi', '');
+    satOffer.status = 'done';
+    satOffer.thumb = true;
+
+    s.cards = [raviOffer, meiOffer, adaRequest, satRequest, satOffer];
+    s.confirmed = [{
+      id: uid('conf'),
+      requestId: satRequest.id,
+      offerId: satOffer.id,
+      slotId: slotKey('Sat', 'Night'),
+      requestPerson: 'Mei',
+      offerPerson: 'Ravi',
+      tradeSlotId: '',
+      mode: 'pickup',
+      applied: true,
+      createdAt: new Date().toISOString()
+    }];
+    return _ensureRosterCoverage(s);
+  }
+
+  return {
+    STORAGE_KEY: STORAGE_KEY,
+    DEFAULT_DAYS: DEFAULT_DAYS,
+    DEFAULT_SHIFTS: DEFAULT_SHIFTS,
+    uid: uid,
+    slotKey: slotKey,
+    slotParts: slotParts,
+    emptyState: emptyState,
+    normalizeState: normalizeState,
+    slotLabel: slotLabel,
+    newCard: newCard,
+    newRequest: newRequest,
+    newOffer: newOffer,
+    addCard: addCard,
+    buildMatches: buildMatches,
+    cardById: cardById,
+    matchById: matchById,
+    isFullyThumbed: isFullyThumbed,
+    confirmMatch: confirmMatch,
+    applyConfirmationToSlots: applyConfirmationToSlots,
+    tallyFairness: tallyFairness,
+    noteLines: noteLines,
+    sampleState: sampleState
+  };
+})();
+
+if (typeof window !== 'undefined') window.SwapLogic = SwapLogic;
+if (typeof module !== 'undefined' && module.exports) module.exports = SwapLogic;
+/* === SWAPLOGIC END === */
+</script>
+
+<script id="app">
+(function () {
+  'use strict';
+  var SL = window.SwapLogic;
+  var KEY = SL.STORAGE_KEY;
+  var state = loadState();
+
+  function loadState() {
+    try {
+      var raw = window.localStorage.getItem(KEY);
+      return SL.normalizeState(raw ? JSON.parse(raw) : null);
+    } catch (err) {
+      return SL.emptyState();
+    }
+  }
+
+  function save() {
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify(state));
+      document.getElementById('save-note').textContent =
+        'Saved in this browser (' + new Date().toLocaleTimeString() + ')';
+    } catch (err) {
+      document.getElementById('save-note').textContent = 'Could not save locally: ' + err.message;
+    }
+  }
+
+  function esc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function slotOptions(selected) {
+    var out = [];
+    state.days.forEach(function (d) {
+      state.shifts.forEach(function (s) {
+        var key = SL.slotKey(d, s);
+        var sel = key === selected ? ' selected' : '';
+        out.push('<option value="' + esc(key) + '"' + sel + '>' + esc(SL.slotLabel(state, key)) + '</option>');
+      });
+    });
+    return out.join('');
+  }
+
+  function personOptions(selected, includeOpen) {
+    var out = includeOpen ? '<option value=""' + (selected ? '' : ' selected') + '>(unassigned)</option>' : '';
+    state.people.forEach(function (p) {
+      var sel = p === selected ? ' selected' : '';
+      out.push('<option value="' + esc(p) + '"' + sel + '>' + esc(p) + '</option>');
+    });
+    if (selected && state.people.indexOf(selected) === -1) {
+      out = out.replace('<option value=""', '<option value="' + esc(selected) + '"' +
+        (includeOpen ? '' : ' selected') + '>' + esc(selected) + '</option><option value=""');
+    }
+    return out;
+  }
+
+  function renderRoster() {
+    var box = document.getElementById('roster-list');
+    if (!state.people.length) {
+      box.innerHTML = '<p class="hint">No squad members yet. Add yourself first.</p>';
+      return;
+    }
+    box.innerHTML = state.people.map(function (p, i) {
+      return '<span class="person-chip">' + esc(p) +
+        ' <button class="small" data-action="remove-person" data-index="' + i +
+        '" aria-label="Remove ' + esc(p) + '">Remove</button></span>';
+    }).join(' ');
+  }
+
+  function renderGrid() {
+    var head = '<tr><th>Day</th>' + state.shifts.map(function (s) {
+      return '<th scope="col">' + esc(s) + '</th>';
+    }).join('') + '</tr>';
+    document.getElementById('grid-head').innerHTML = head;
+
+    var rows = state.days.map(function (d, di) {
+      var cells = state.shifts.map(function (s) {
+        var key = SL.slotKey(d, s);
+        var slot = state.slots[key] || { person: '', needs: false };
+        return '<td class="cell">' +
+          '<div class="cell-controls">' +
+          '<div class="row"><select data-slot-person="' + esc(key) + '" aria-label="Assigned nurse for ' +
+          esc(SL.slotLabel(state, key)) + '">' + personOptions(slot.person, true) + '</select></div>' +
+          '<div class="row">' +
+          (slot.needs
+            ? '<span class="needs-chip">Needs coverage</span>'
+            : '<span class="open-tag">filled as written</span>') +
+          '<button class="small' + (slot.needs ? ' toggled' : '') +
+          '" data-action="toggle-needs" data-slot="' + esc(key) + '"' +
+          ' aria-pressed="' + (slot.needs ? 'true' : 'false') + '">Need coverage</button>' +
+          '<button class="small" data-action="quick-request" data-slot="' + esc(key) +
+          '" title="Add a coverage request for this slot">Request</button>' +
+          '<button class="small" data-action="quick-offer" data-slot="' + esc(key) +
+          '" title="Add an offer to cover this slot">Offer</button>' +
+          '</div></div></td>';
+      }).join('');
+      return '<tr><th scope="row"><input class="day-label" data-day="' + di +
+        '" value="' + esc(d) + '" aria-label="Day label ' + (di + 1) + '"></th>' + cells + '</tr>';
+    }).join('');
+    document.getElementById('grid-body').innerHTML = rows;
+  }
+
+  function renderBoard() {
+    document.getElementById('board-slot').innerHTML = slotOptions(state.days[0] ? SL.slotKey(state.days[0], state.shifts[0]) : '');
+    document.getElementById('board-person').innerHTML = personOptions(state.people[0] || '', false);
+    var box = document.getElementById('cards');
+    var open = state.cards.filter(function (c) { return c.status === 'open'; });
+    var done = state.cards.filter(function (c) { return c.status === 'done'; });
+    var html = open.map(cardHtml).join('');
+    if (done.length) {
+      html += '<p class="hint" style="grid-column:1/-1">Covered cards (kept for your records):</p>';
+      html += done.map(cardHtml).join('');
+    }
+    box.innerHTML = html || '<p class="hint">No cards yet. Add a request or an offer above, or use the quick buttons on the grid.</p>';
+  }
+
+  function cardHtml(c) {
+    var tag = c.kind === 'request' ? 'Request' : 'Offer';
+    var classKind = c.kind;
+    var tradeField = '';
+    if (c.kind === 'offer') {
+      tradeField =
+        '<label>Trade-back slot (optional; blank = plain pickup)</label>' +
+        '<select data-card="' + esc(c.id) + '" data-field="tradeSlotId">' +
+        '<option value=""' + (!c.tradeSlotId ? ' selected' : '') + '>(no trade-back)</option>' +
+        slotOptions(c.tradeSlotId && c.tradeSlotId !== c.slotId ? c.tradeSlotId : '') +
+        '</select>';
+    }
+    return '<div class="card ' + classKind + (c.status === 'done' ? ' done' : '') + '">' +
+      '<div class="card-top"><span class="tag">' + tag + '</span>' +
+      '<span class="slot">' + esc(SL.slotLabel(state, c.slotId)) + '</span></div>' +
+      '<div class="fields">' +
+      '<label>Nurse</label>' +
+      '<select data-card="' + esc(c.id) + '" data-field="person">' + personOptions(c.person, false) + '</select>' +
+      tradeField +
+      '<label>Note (what you want written down)</label>' +
+      '<input data-card="' + esc(c.id) + '" data-field="detail" value="' + esc(c.detail) +
+      '" placeholder="e.g. dentist appointment" maxlength="200">' +
+      '</div>' +
+      '<div class="card-actions">' +
+      '<button class="small' + (c.thumb ? ' toggled' : '') + '" data-action="thumb" data-card="' + esc(c.id) +
+      '" aria-pressed="' + (c.thumb ? 'true' : 'false') + '"' +
+      (c.status === 'done' ? ' disabled' : '') + '>Thumbs-up' + (c.thumb ? ' given' : '') + '</button>' +
+      '<button class="small" data-action="delete-card" data-card="' + esc(c.id) + '">Delete</button>' +
+      '</div></div>';
+  }
+
+  function renderMatches() {
+    var matches = SL.buildMatches(state);
+    var box = document.getElementById('matches');
+    if (!matches.length) {
+      box.innerHTML = '<p class="hint">No possible matches right now. Matches appear when a request and an offer share the same slot but name different nurses.</p>';
+      return;
+    }
+    box.innerHTML = matches.map(function (m) {
+      var r = SL.cardById(state, m.requestId);
+      var o = SL.cardById(state, m.offerId);
+      var both = SL.isFullyThumbed(state, m);
+      return '<div class="match">' +
+        '<strong>' + esc(m.offerPerson) + '</strong> offers to cover <strong>' +
+        esc(m.requestPerson) + '</strong>&rsquo;s shift: <strong>' + esc(SL.slotLabel(state, m.slotId)) + '</strong>' +
+        '<div class="thumb-state">' +
+        esc(m.requestPerson) + ' thumbs-up: <span class="' + (r && r.thumb ? 'thumb-yes">yes' : 'thumb-no">not yet') + '</span> &nbsp; ' +
+        esc(m.offerPerson) + ' thumbs-up: <span class="' + (o && o.thumb ? 'thumb-yes">yes' : 'thumb-no">not yet') + '</span>' +
+        '</div>' +
+        (m.tradeSlotId
+          ? '<div class="thumb-state">Proposed trade-back: ' + esc(SL.slotLabel(state, m.tradeSlotId)) + '</div>'
+          : '') +
+        '<div class="card-actions">' +
+        '<button class="primary" data-action="confirm-pickup" data-match="' + esc(m.id) + '"' +
+        (both ? '' : ' disabled') + '>Record as covered (pickup)</button>' +
+        '<button class="primary" data-action="confirm-swap" data-match="' + esc(m.id) + '"' +
+        (both && m.tradeSlotId ? '' : ' disabled') +
+        ' title="' + (m.tradeSlotId ? 'Record as an even swap with trade-back' : 'No trade-back slot on this offer') +
+        '">Record as covered (even swap)</button>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  function renderConfirmed() {
+    var box = document.getElementById('confirmed');
+    if (!state.confirmed.length) {
+      box.innerHTML = '<p class="hint">Nothing recorded yet. Once a match has two thumbs-ups you can record it here.</p>';
+      return;
+    }
+    box.innerHTML = state.confirmed.slice().reverse().map(function (c) {
+      var trade = c.tradeSlotId ? esc(SL.slotLabel(state, c.tradeSlotId)) : 'none';
+      return '<div class="confirmation">' +
+        '<div><strong>' + esc(SL.slotLabel(state, c.slotId)) + '</strong> &mdash; ' +
+        esc(c.requestPerson) + ' out, ' + esc(c.offerPerson) + ' in (' + esc(c.mode) + ')' +
+        (c.tradeSlotId ? ' &mdash; trade-back: ' + trade : '') + '</div>' +
+        '<div class="' + (c.applied ? 'applied">Applied to grid' : 'pending">Not yet written onto the grid') + '</div>' +
+        '<div class="card-actions">' +
+        (c.applied ? '' :
+          '<button class="small" data-action="apply-pickup" data-conf="' + esc(c.id) + '">Write pickup onto grid</button>' +
+          (c.tradeSlotId
+            ? '<button class="small" data-action="apply-swap" data-conf="' + esc(c.id) + '">Write even swap onto grid</button>'
+            : '')) +
+        '<button class="small" data-action="print-one" data-conf="' + esc(c.id) + '">Print this note</button>' +
+        '<button class="small careful" data-action="delete-confirmation" data-conf="' + esc(c.id) + '">Delete record</button>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  function renderFairness() {
+    var rows = SL.tallyFairness(state);
+    var box = document.getElementById('fairness');
+    if (!rows.length) {
+      box.innerHTML = '<p class="hint">Add squad members to see the tally.</p>';
+      return;
+    }
+    box.innerHTML = '<table class="fair"><thead><tr><th scope="col">Nurse</th><th scope="col">Given</th>' +
+      '<th scope="col">Received</th><th scope="col">Net</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        var cls = r.net > 0 ? 'net-pos' : (r.net < 0 ? 'net-neg' : 'net-zero');
+        return '<tr><td>' + esc(r.person) + '</td><td>' + r.given + '</td><td>' + r.received +
+          '</td><td class="' + cls + '">' + (r.net > 0 ? '+' : '') + r.net + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  function buildPrintArea(confList) {
+    var area = document.getElementById('print-area');
+    var header = '<div class="print-head">Swap-confirm notes &mdash; ' +
+      esc(new Date().toLocaleDateString()) + '</div>';
+    var html = confList.map(function (c) {
+      var lines = SL.noteLines(state, c);
+      return '<div class="note-box">' + lines.map(function (l) {
+        return '<p>' + esc(l) + '</p>';
+      }).join('') + '</div>';
+    }).join('');
+    area.innerHTML = header + html;
+  }
+
+  function render() {
+    renderRoster();
+    renderGrid();
+    renderBoard();
+    renderMatches();
+    renderConfirmed();
+    renderFairness();
+    save();
+  }
+
+  function removePerson(index) {
+    var name = state.people[index];
+    if (!name) return;
+    if (!window.confirm('Remove ' + name + ' and their cards?')) return;
+    state.people.splice(index, 1);
+    state.cards = state.cards.filter(function (c) { return c.person !== name; });
+    Object.keys(state.slots).forEach(function (k) {
+      if (state.slots[k].person === name) state.slots[k].person = '';
+    });
+    state.cards.forEach(function (c) {
+      if (c.tradeSlotId && state.slots[c.tradeSlotId] &&
+          state.slots[c.tradeSlotId].person === name) {
+        c.tradeSlotId = '';
+      }
+    });
+    render();
+  }
+
+  function addCardFromBoard(kind) {
+    var slotEl = document.getElementById('board-slot');
+    var personEl = document.getElementById('board-person');
+    var slotId = slotEl.value;
+    var person = personEl.value;
+    if (!slotId) return;
+    var res = kind === 'request'
+      ? SL.newRequest(state, slotId, person)
+      : SL.newOffer(state, slotId, person, '');
+    state = res.state;
+    render();
+  }
+
+  function buildNoteForPrint(confIdList) {
+    var list = state.confirmed.filter(function (c) { return confIdList.indexOf(c.id) !== -1; });
+    if (!list.length) {
+      window.alert('Nothing covered yet to print. Record a covered match first.');
+      return false;
+    }
+    buildPrintArea(list);
+    return true;
+  }
+
+  document.addEventListener('click', function (ev) {
+    var el = ev.target.closest ? ev.target.closest('[data-action]') : null;
+    if (!el) return;
+    var action = el.getAttribute('data-action');
+
+    if (action === 'add-person') {
+      var input = document.getElementById('new-person');
+      var name = input.value.trim();
+      if (!name) return;
+      if (state.people.indexOf(name) === -1) state.people.push(name);
+      input.value = '';
+      render();
+    } else if (action === 'remove-person') {
+      removePerson(Number(el.getAttribute('data-index')));
+    } else if (action === 'load-sample') {
+      if (state.cards.length || state.confirmed.length) {
+        if (!window.confirm('Replace the current board with the example squad?')) return;
+      }
+      state = SL.sampleState();
+      render();
+    } else if (action === 'toggle-needs') {
+      var key = el.getAttribute('data-slot');
+      if (state.slots[key]) {
+        state.slots[key].needs = !state.slots[key].needs;
+        render();
+      }
+    } else if (action === 'quick-request') {
+      var k1 = el.getAttribute('data-slot');
+      var person1 = state.slots[k1] ? state.slots[k1].person : '';
+      state = SL.newRequest(state, k1, person1).state;
+      render();
+    } else if (action === 'quick-offer') {
+      state = SL.newOffer(state, el.getAttribute('data-slot'), '', '').state;
+      render();
+    } else if (action === 'add-request') {
+      addCardFromBoard('request');
+    } else if (action === 'add-offer') {
+      addCardFromBoard('offer');
+    } else if (action === 'thumb') {
+      var card = SL.cardById(state, el.getAttribute('data-card'));
+      if (card && card.status === 'open') {
+        card.thumb = !card.thumb;
+        render();
+      }
+    } else if (action === 'delete-card') {
+      var id = el.getAttribute('data-card');
+      if (!window.confirm('Delete this card?')) return;
+      state.cards = state.cards.filter(function (c) { return c.id !== id; });
+      render();
+    } else if (action === 'confirm-pickup') {
+      var m1 = SL.matchById(state, el.getAttribute('data-match'));
+      var res1 = SL.confirmMatch(state, m1, 'pickup');
+      if (res1.confirmation) { state = res1.state; render(); }
+    } else if (action === 'confirm-swap') {
+      var m2 = SL.matchById(state, el.getAttribute('data-match'));
+      var res2 = SL.confirmMatch(state, m2, 'swap');
+      if (res2.confirmation) { state = res2.state; render(); }
+    } else if (action === 'apply-pickup') {
+      var conf1 = state.confirmed.filter(function (c) { return c.id === el.getAttribute('data-conf'); })[0];
+      if (conf1) {
+        state = SL.applyConfirmationToSlots(state, Object.assign({}, conf1, { mode: 'pickup' })).state;
+        render();
+      }
+    } else if (action === 'apply-swap') {
+      var conf2 = state.confirmed.filter(function (c) { return c.id === el.getAttribute('data-conf'); })[0];
+      if (conf2) {
+        state = SL.applyConfirmationToSlots(state, Object.assign({}, conf2, { mode: 'swap' })).state;
+        render();
+      }
+    } else if (action === 'delete-confirmation') {
+      var confId = el.getAttribute('data-conf');
+      if (!window.confirm('Delete this covered-trade record (and its fairness tally)?')) return;
+      state.confirmed = state.confirmed.filter(function (c) { return c.id !== confId; });
+      render();
+    } else if (action === 'print-notes') {
+      var ids = state.confirmed.map(function (c) { return c.id; });
+      if (buildNoteForPrint(ids)) window.print();
+    } else if (action === 'print-one') {
+      if (buildNoteForPrint([el.getAttribute('data-conf')])) window.print();
+    } else if (action === 'export-json') {
+      var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'unit-swap-board-' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } else if (action === 'import-json') {
+      document.getElementById('import-file').click();
+    } else if (action === 'reset-all') {
+      if (window.confirm('Erase ALL board data from this browser? This cannot be undone.')) {
+        state = SL.emptyState();
+        render();
+      }
+    }
+  });
+
+  document.addEventListener('change', function (ev) {
+    var t = ev.target;
+    if (t.hasAttribute && t.hasAttribute('data-slot-person')) {
+      var key = t.getAttribute('data-slot-person');
+      if (state.slots[key]) {
+        state.slots[key].person = t.value;
+        render();
+      }
+    } else if (t.classList && t.classList.contains('day-label')) {
+      var i = Number(t.getAttribute('data-day'));
+      var v = t.value.trim() || SL.DEFAULT_DAYS[i] || ('Day ' + (i + 1));
+      state.days[i] = v;
+      var oldKeys = Object.keys(state.slots);
+      var assignments = {};
+      oldKeys.forEach(function (k) {
+        assignments[k] = { person: state.slots[k].person, needs: state.slots[k].needs };
+      });
+      state = SL.normalizeState(Object.assign({}, state, { slots: assignments }));
+      render();
+    } else if (t.hasAttribute && t.hasAttribute('data-card')) {
+      var card = SL.cardById(state, t.getAttribute('data-card'));
+      if (!card) return;
+      var field = t.getAttribute('data-field');
+      if (field === 'person') card.person = t.value;
+      if (field === 'detail') card.detail = t.value.trim().slice(0, 200);
+      if (field === 'tradeSlotId') card.tradeSlotId = (t.value && t.value !== card.slotId) ? t.value : '';
+      render();
+    } else if (t.id === 'import-file') {
+      var file = t.files && t.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          var parsed = JSON.parse(String(reader.result));
+          if (!window.confirm('Replace the current board with this file?')) return;
+          state = SL.normalizeState(parsed);
+          render();
+        } catch (err) {
+          window.alert('Could not read that file as board JSON: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+      t.value = '';
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
